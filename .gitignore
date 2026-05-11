@@ -1,0 +1,33 @@
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.venv/
+venv/
+env/
+.env
+
+# Test and tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Generated ML artifacts
+app/models/model.txt
+MODEL_COMPARISON.html
+data/synthetic_data.csv
+data/training_data.csv
+
+# Local logs and temporary outputs
+*.log
+*.tmp
+*.bak

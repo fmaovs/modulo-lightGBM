@@ -1,0 +1,4 @@
+obligacion_id,dias_vencidos,monto_adeudado,pct_pagos_on_time
+CR1001,10,50000,0.85
+CR1002,45,250000,0.60
+CR1003,200,1500000,0.20
