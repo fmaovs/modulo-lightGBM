@@ -125,7 +125,8 @@ async def upload_batch(file: UploadFile = File(...)):
         payload = PredictInput(**row.fillna(0).to_dict())
         out = predict(payload)
         results.append(out.dict())
-    return JSONResponse({"processed": len(results), "results_sample": results[:3]})
+    # Return full results so callers can query by obligacion_id client-side
+    return JSONResponse({"processed": len(results), "results": results, "results_sample": results[:3]})
 
 
 @app.post("/feedback")
