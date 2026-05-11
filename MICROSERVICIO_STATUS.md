@@ -10,7 +10,7 @@ La solución está **100% operacional** con scoring hybrid (reglas + ML) integra
 
 ### 1. POST `/predict` - Scoring Individual
 
-**URL**: `http://localhost:9000/predict`
+**URL**: `http://localhost:9001/predict`
 
 **Input**:
 ```json
@@ -49,7 +49,7 @@ La solución está **100% operacional** con scoring hybrid (reglas + ML) integra
 
 ### 2. POST `/batch/upload` - Carga Masiva
 
-**URL**: `http://localhost:9000/batch/upload`
+**URL**: `http://localhost:9001/batch/upload`
 
 **Input**: Archivo CSV con columnas: `obligacion_id, dias_vencidos, monto_adeudado, pct_pagos_on_time`
 
@@ -69,7 +69,7 @@ La solución está **100% operacional** con scoring hybrid (reglas + ML) integra
 
 ### 3. POST `/feedback` - Registro de Pagos
 
-**URL**: `http://localhost:9000/feedback`
+**URL**: `http://localhost:9001/feedback`
 
 **Input**:
 ```json
@@ -87,7 +87,7 @@ La solución está **100% operacional** con scoring hybrid (reglas + ML) integra
 
 ### 4. GET `/health` - Health Check
 
-**URL**: `http://localhost:9000/health`
+**URL**: `http://localhost:9001/health`
 
 **Output**:
 ```json
@@ -157,14 +157,14 @@ source .venv/bin/activate
 BACKEND_URL="http://localhost:8080/api" \
 BACKEND_USER="admin" \
 BACKEND_PASS="admin123" \
-uvicorn app.main:app --host 0.0.0.0 --port 9000
+uvicorn app.main:app --host 0.0.0.0 --port 9001
 ```
 
 ### Test con curl
 
 **Scoring individual**:
 ```bash
-curl -X POST 'http://localhost:9000/predict' \
+curl -X POST 'http://localhost:9001/predict' \
   -H 'Content-Type: application/json' \
   -d '{
     "obligacion_id":"TEST001",
@@ -176,13 +176,13 @@ curl -X POST 'http://localhost:9000/predict' \
 
 **Batch upload**:
 ```bash
-curl -X POST 'http://localhost:9000/batch/upload' \
+curl -X POST 'http://localhost:9001/batch/upload' \
   -F 'file=@examples/sample_batch.csv'
 ```
 
 **Feedback**:
 ```bash
-curl -X POST 'http://localhost:9000/feedback' \
+curl -X POST 'http://localhost:9001/feedback' \
   -H 'Content-Type: application/json' \
   -d '{
     "obligacion_id":"TEST001",

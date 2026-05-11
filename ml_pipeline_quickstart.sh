@@ -30,7 +30,7 @@ echo "   ✓ Comparison report generated"
 # Step 4: Show health status
 echo -e "\n🏥 Step 4: Checking service health..."
 sleep 1
-curl -s http://localhost:9000/health | python3 -m json.tool
+curl -s http://localhost:9001/health | python3 -m json.tool
 echo "   ✓ Service is operational"
 
 echo -e "\n=================================="
@@ -42,8 +42,8 @@ echo "   1. View comparison: open MODEL_COMPARISON.html"
 echo "   2. Read demo: DEMO_ENTRENAMIENTO_VS_FALLBACK.md"
 echo "   3. Restart microservice to load trained model:"
 echo "      BACKEND_URL=http://localhost:8080/api BACKEND_USER=admin BACKEND_PASS=admin123 \\"
-echo "      uvicorn app.main:app --port 9000"
+echo "      uvicorn app.main:app --port 9001"
 echo "   4. Test predictions:"
-echo "      curl -X POST http://localhost:9000/predict -H 'Content-Type: application/json' \\"
+echo "      curl -X POST http://localhost:9001/predict -H 'Content-Type: application/json' \\"
 echo "        -d '{\"dias_vencidos\": 30, \"monto_adeudado\": 100000}'"
 echo ""

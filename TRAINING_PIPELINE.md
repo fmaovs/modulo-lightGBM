@@ -254,7 +254,7 @@ pip install lightgbm pandas scikit-learn numpy matplotlib plotly
 - Muestra mejoras en métricas
 
 ### Paso 5: Integración
-- Reiniciar microservicio: `uvicorn app.main:app --port 9000`
+- Reiniciar microservicio: `uvicorn app.main:app --port 9001`
 - `/predict` usa automáticamente el modelo si existe `app/models/model.txt`
 
 ---

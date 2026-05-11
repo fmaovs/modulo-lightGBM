@@ -2,11 +2,11 @@
 
 ## Quick Start
 
-**Service running on**: `http://localhost:9000`
+**Service running on**: `http://localhost:9001`
 
 ### Health Check
 ```bash
-curl http://localhost:9000/health
+curl http://localhost:9001/health
 ```
 
 Expected:
@@ -20,7 +20,7 @@ Expected:
 
 ### Test 1: Low Risk Customer (No arrears)
 ```bash
-curl -X POST 'http://localhost:9000/predict' \
+curl -X POST 'http://localhost:9001/predict' \
   -H 'Content-Type: application/json' \
   -d '{
     "obligacion_id":"PROFILE_LOW_RISK",
@@ -44,7 +44,7 @@ curl -X POST 'http://localhost:9000/predict' \
 
 ### Test 2: Medium Risk Customer (30-60 days arrears)
 ```bash
-curl -X POST 'http://localhost:9000/predict' \
+curl -X POST 'http://localhost:9001/predict' \
   -H 'Content-Type: application/json' \
   -d '{
     "obligacion_id":"PROFILE_MEDIUM_RISK",
@@ -67,7 +67,7 @@ curl -X POST 'http://localhost:9000/predict' \
 
 ### Test 3: High Risk Customer (>90 days arrears)
 ```bash
-curl -X POST 'http://localhost:9000/predict' \
+curl -X POST 'http://localhost:9001/predict' \
   -H 'Content-Type: application/json' \
   -d '{
     "obligacion_id":"PROFILE_HIGH_RISK",
@@ -90,7 +90,7 @@ curl -X POST 'http://localhost:9000/predict' \
 
 ### Test 4: Minimal Input (Only required fields)
 ```bash
-curl -X POST 'http://localhost:9000/predict' \
+curl -X POST 'http://localhost:9001/predict' \
   -H 'Content-Type: application/json' \
   -d '{
     "dias_vencidos":30,
@@ -103,7 +103,7 @@ curl -X POST 'http://localhost:9000/predict' \
 
 ### Test 5: Edge Case - No arrears, Large amount
 ```bash
-curl -X POST 'http://localhost:9000/predict' \
+curl -X POST 'http://localhost:9001/predict' \
   -H 'Content-Type: application/json' \
   -d '{
     "obligacion_id":"EDGE_HIGH_AMOUNT",
@@ -119,7 +119,7 @@ curl -X POST 'http://localhost:9000/predict' \
 
 ### Upload Sample CSV
 ```bash
-curl -X POST 'http://localhost:9000/batch/upload' \
+curl -X POST 'http://localhost:9001/batch/upload' \
   -F 'file=@examples/sample_batch.csv'
 ```
 
@@ -134,7 +134,7 @@ TEST_B003,180,3000000,0.10
 EOF
 
 # Upload
-curl -X POST 'http://localhost:9000/batch/upload' \
+curl -X POST 'http://localhost:9001/batch/upload' \
   -F 'file=@/tmp/custom_batch.csv' | jq .
 ```
 
@@ -144,7 +144,7 @@ curl -X POST 'http://localhost:9000/batch/upload' \
 
 ### Record Successful Payment
 ```bash
-curl -X POST 'http://localhost:9000/feedback' \
+curl -X POST 'http://localhost:9001/feedback' \
   -H 'Content-Type: application/json' \
   -d '{
     "obligacion_id":"PROD001",
@@ -156,7 +156,7 @@ curl -X POST 'http://localhost:9000/feedback' \
 
 ### Record Payment Failure
 ```bash
-curl -X POST 'http://localhost:9000/feedback' \
+curl -X POST 'http://localhost:9001/feedback' \
   -H 'Content-Type: application/json' \
   -d '{
     "obligacion_id":"PROD002",
@@ -168,7 +168,7 @@ curl -X POST 'http://localhost:9000/feedback' \
 
 ### Partial Payment
 ```bash
-curl -X POST 'http://localhost:9000/feedback' \
+curl -X POST 'http://localhost:9001/feedback' \
   -H 'Content-Type: application/json' \
   -d '{
     "obligacion_id":"PROD003",
@@ -184,21 +184,21 @@ curl -X POST 'http://localhost:9000/feedback' \
 
 ### Pretty Print JSON Response
 ```bash
-curl -s -X POST 'http://localhost:9000/predict' \
+curl -s -X POST 'http://localhost:9001/predict' \
   -H 'Content-Type: application/json' \
   -d '{"dias_vencidos":30,"monto_adeudado":100000}' | jq .
 ```
 
 ### View HTTP Headers
 ```bash
-curl -i -X POST 'http://localhost:9000/predict' \
+curl -i -X POST 'http://localhost:9001/predict' \
   -H 'Content-Type: application/json' \
   -d '{"dias_vencidos":30,"monto_adeudado":100000}'
 ```
 
 ### Verbose Output (debug)
 ```bash
-curl -v -X POST 'http://localhost:9000/predict' \
+curl -v -X POST 'http://localhost:9001/predict' \
   -H 'Content-Type: application/json' \
   -d '{"dias_vencidos":30,"monto_adeudado":100000}'
 ```
@@ -252,7 +252,7 @@ export BACKEND_PASS="admin123"
 
 # Microservice startup
 export UVICORN_HOST="0.0.0.0"
-export UVICORN_PORT="9000"
+export UVICORN_PORT="9001"
 ```
 
 ---

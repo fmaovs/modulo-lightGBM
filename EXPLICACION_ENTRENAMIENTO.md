@@ -127,7 +127,7 @@ app/models/model.txt  ← LightGBM binary file (5-100 KB típicamente)
 
 ### Paso 2: Reiniciar Microservicio
 ```bash
-uvicorn app.main:app --port 9000
+uvicorn app.main:app --port 9001
 ```
 
 En el startup:
@@ -158,7 +158,7 @@ POST /predict
 
 ```bash
 # Opción 1: Health check
-curl http://localhost:9000/health | jq .
+curl http://localhost:9001/health | jq .
 
 # Opción 2: Logs del microservicio
 # Si ves "usando_ml": true en respuesta → Modelo cargado

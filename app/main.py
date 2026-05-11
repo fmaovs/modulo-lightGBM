@@ -9,7 +9,7 @@ import json
 import copy
 
 from app.schemas import PredictInput, PredictOutput, Feedback
-from app.scoring.rules_engine import calculate_rules_score
+from app.scoring.rules_engine import calculate_rules_score, evaluate_rules_with_details
 from app.scoring.ml_model import MLModel
 from app.integrations.backend_client import BackendClient
 import os
@@ -67,19 +67,38 @@ def predict(payload: PredictInput):
     cfg = scoring_config
     print(f"[PREDICT] cfg={cfg is not None}, vars={len(cfg.get('variables',[])) if cfg else 0}", file=sys.stderr)
     
-    # Backend returns RISK scores (higher = more risk), we invert to QUALITY scores (higher = better client)
-    risk_score_rules = calculate_rules_score(data, config=cfg)
+    # Evaluate rules with details for auditing
+    rules_eval = evaluate_rules_with_details(data, config=cfg)
+    risk_score_rules = rules_eval.get("score")
     score_reglas = 1000 - risk_score_rules
-    
-    # ml - always inverted since ML returns probability (0-100) which we transform to risk and then invert
+
+    # ML predictions (prob 0..100)
     prob = ml.predict_proba(data)
     risk_score_ml = int(prob * 10)  # map 0..100 probability to 0..1000 risk
     score_ml = 1000 - risk_score_ml  # invert to quality score
 
-    # híbrido: configurable por ahora pesos por defecto
-    w_rules = 0.5
-    w_ml = 0.5 if ml.is_available() else 0.0
-    score_final = int((score_reglas * w_rules + score_ml * w_ml) / (w_rules + w_ml if (w_rules + w_ml) > 0 else 1))
+    # Decide which engine to use based on backend preference and availability
+    prefer_ml = data.get("prefer_ml")
+    ml_available = ml.is_available()
+
+    if prefer_ml is True:
+        if ml_available:
+            engine = "ML"
+            score_final = score_ml
+        else:
+            engine = "RULES_FALLBACK_TO_RULES_WHEN_ML_MISSING"
+            score_final = score_reglas
+    elif prefer_ml is False:
+        engine = "RULES_FORCED_BY_BACKEND"
+        score_final = score_reglas
+    else:
+        # default: use ML if available else rules
+        if ml_available:
+            engine = "ML"
+            score_final = score_ml
+        else:
+            engine = "RULES"
+            score_final = score_reglas
 
     segmento = "BRONCE"
     if score_final >= 800:
@@ -93,6 +112,30 @@ def predict(payload: PredictInput):
     else:
         segmento = "RECOVERY"
 
+    # build audit record
+    audit = {
+        "obligacion_id": data.get("obligacion_id"),
+        "engine_used": engine,
+        "ml_available": ml_available,
+        "model_version": ml.version(),
+        "score_reglas": score_reglas,
+        "score_ml": score_ml,
+        "score_final": score_final,
+        "rules_details": rules_eval.get("details", []),
+    }
+
+    # best-effort: send audit to backend and persist locally
+    try:
+        backend_client.send_score_audit(audit)
+    except Exception:
+        pass
+    try:
+        os.makedirs("data", exist_ok=True)
+        with open("data/score_audit.log", "a") as f:
+            f.write(json.dumps(audit) + "\n")
+    except Exception:
+        pass
+
     out = PredictOutput(
         obligacion_id=data.get("obligacion_id"),
         score_final=score_final,
@@ -104,6 +147,7 @@ def predict(payload: PredictInput):
         model_version=ml.version(),
         usando_ml=ml.is_available(),
         recomendacion="Contacto preferente + incentivos" if score_final < 600 else "Mantenimiento"
+        , audit={"engine_used": engine, "model_version": ml.version()}
     )
     return out
 

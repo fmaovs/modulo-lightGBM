@@ -1,0 +1,6 @@
+fecha,consecutivo,cantidad,lote,,,,,,
+2026-05-07,CONS-2026-839,3,LOTE-MAYO-2026-001,,,,,,
+document_type,document_number,client_name,obligation_id,obligation_amount,due_date,days_past_due,currency,mobile,email
+CC,872710000,LAURA LOPEZ PEREZ,OBL-001,13449179.85,2026-04-07,5,COP,3209493878,fvillanueva@bankvision.com.co
+NIT,865150001,DIANA SANCHEZ VILLANUEVA,OBL-002,8158373.99,2025-12-07,100,COP,3209493878,csanchez@bankvision.com.co
+NIT,362490002,MARIA ZULUAGA PEREZ,OBL-003,7870571.5,2025-12-07,200,COP,3206877551,kritho0311@gmail.com

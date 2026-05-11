@@ -2,7 +2,7 @@
 
 ## Inicio rápido
 
-El microservicio está corriendo en: `http://localhost:9000`
+El microservicio está corriendo en: `http://localhost:9001`
 
 ### Variables de entorno (opcional, para conectar con backend Java)
 
@@ -17,7 +17,7 @@ export BACKEND_PASS="admin123"
 ## 1. PREDICT - Cliente sin mora (Bajo riesgo)
 
 **Método:** POST  
-**URL:** `http://localhost:9000/predict`  
+**URL:** `http://localhost:9001/predict`  
 **Headers:** `Content-Type: application/json`
 
 **Body:**
@@ -34,7 +34,7 @@ export BACKEND_PASS="admin123"
 
 **Curl:**
 ```bash
-curl -X POST 'http://localhost:9000/predict' \
+curl -X POST 'http://localhost:9001/predict' \
   -H 'Content-Type: application/json' \
   -d '{
     "obligacion_id": "CR001",
@@ -51,7 +51,7 @@ curl -X POST 'http://localhost:9000/predict' \
 ## 2. PREDICT - Cliente en mora moderada (Riesgo medio)
 
 **Método:** POST  
-**URL:** `http://localhost:9000/predict`  
+**URL:** `http://localhost:9001/predict`  
 **Headers:** `Content-Type: application/json`
 
 **Body:**
@@ -68,7 +68,7 @@ curl -X POST 'http://localhost:9000/predict' \
 
 **Curl:**
 ```bash
-curl -X POST 'http://localhost:9000/predict' \
+curl -X POST 'http://localhost:9001/predict' \
   -H 'Content-Type: application/json' \
   -d '{
     "obligacion_id": "CR002",
@@ -85,7 +85,7 @@ curl -X POST 'http://localhost:9000/predict' \
 ## 3. PREDICT - Cliente en mora severa (Alto riesgo)
 
 **Método:** POST  
-**URL:** `http://localhost:9000/predict`  
+**URL:** `http://localhost:9001/predict`  
 **Headers:** `Content-Type: application/json`
 
 **Body:**
@@ -102,7 +102,7 @@ curl -X POST 'http://localhost:9000/predict' \
 
 **Curl:**
 ```bash
-curl -X POST 'http://localhost:9000/predict' \
+curl -X POST 'http://localhost:9001/predict' \
   -H 'Content-Type: application/json' \
   -d '{
     "obligacion_id": "CR003",
@@ -119,7 +119,7 @@ curl -X POST 'http://localhost:9000/predict' \
 ## 4. BATCH UPLOAD - Cargar archivo CSV
 
 **Método:** POST  
-**URL:** `http://localhost:9000/batch/upload`  
+**URL:** `http://localhost:9001/batch/upload`  
 **Headers:** `Content-Type: multipart/form-data`
 
 **Body:** Seleccionar archivo CSV con columnas: `obligacion_id`, `dias_vencidos`, `monto_adeudado`, `pct_pagos_on_time`
@@ -134,7 +134,7 @@ CR1003,200,1500000,0.20
 
 **Curl:**
 ```bash
-curl -X POST 'http://localhost:9000/batch/upload' \
+curl -X POST 'http://localhost:9001/batch/upload' \
   -F "file=@batch.csv"
 ```
 
@@ -143,7 +143,7 @@ curl -X POST 'http://localhost:9000/batch/upload' \
 ## 5. FEEDBACK - Registrar pago realizado
 
 **Método:** POST  
-**URL:** `http://localhost:9000/feedback`  
+**URL:** `http://localhost:9001/feedback`  
 **Headers:** `Content-Type: application/json`
 
 **Body:**
@@ -158,7 +158,7 @@ curl -X POST 'http://localhost:9000/batch/upload' \
 
 **Curl:**
 ```bash
-curl -X POST 'http://localhost:9000/feedback' \
+curl -X POST 'http://localhost:9001/feedback' \
   -H 'Content-Type: application/json' \
   -d '{
     "obligacion_id": "CR001",

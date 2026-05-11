@@ -2,7 +2,7 @@
 # Ejemplos de curl para probar el microservicio de scoring
 # Importar en Postman o ejecutar directamente
 
-BASE_URL="http://localhost:9000"
+BASE_URL="http://localhost:9001"
 
 echo "=== 1. PREDICT - Cliente sin mora (Bajo riesgo) ==="
 curl -X POST "$BASE_URL/predict" \

@@ -3,4 +3,4 @@ set -euo pipefail
 if [ -f ".venv/bin/activate" ]; then
   source .venv/bin/activate
 fi
-uvicorn app.main:app --reload --port 9000
+uvicorn app.main:app --reload --port 9001

@@ -79,3 +79,13 @@ class BackendClient:
         j = r.json()
         self._cache[key] = j
         return j
+
+    def send_score_audit(self, audit: dict) -> bool:
+        """Send audit record to backend; best-effort, returns True if HTTP 200/201."""
+        try:
+            endpoint = os.getenv("BACKEND_AUDIT_ENDPOINT", "/scoring/audit")
+            url = f"{self.base_url.rstrip('/')}{endpoint}"
+            r = requests.post(url, json=audit, headers=self._headers(), timeout=5)
+            return r.status_code in (200, 201)
+        except Exception:
+            return False

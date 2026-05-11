@@ -201,7 +201,7 @@ python3 scripts/train.py --data data/synthetic_data.csv --output app/models/mode
 BACKEND_URL="http://localhost:8080/api" \
 BACKEND_USER="admin" \
 BACKEND_PASS="admin123" \
-uvicorn app.main:app --port 9000
+uvicorn app.main:app --port 9001
 ```
 
 ### 4. Comparar Modelos
@@ -212,7 +212,7 @@ python3 scripts/compare_models.py --data data/synthetic_data.csv --output MODEL_
 
 ### 5. Test Individual
 ```bash
-curl -X POST 'http://localhost:9000/predict' \
+curl -X POST 'http://localhost:9001/predict' \
   -H 'Content-Type: application/json' \
   -d '{
     "dias_vencidos": 60,

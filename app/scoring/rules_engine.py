@@ -101,3 +101,65 @@ def calculate_rules_score(data: dict, config: dict = None) -> int:
     
     score = int(max(0, min(1000, total_weighted / total_weights)))
     return score
+
+
+def evaluate_rules_with_details(data: dict, config: dict = None) -> dict:
+    """
+    Returns a dict with 'score' and 'details' list describing for each variable the matched range and contribution.
+    """
+    if not config:
+        # reuse existing simple score but provide minimal details
+        score = calculate_rules_score(data, None)
+        return {"score": score, "details": []}
+
+    variables = config.get("variables") or []
+    if not variables:
+        score = calculate_rules_score(data, None)
+        return {"score": score, "details": []}
+
+    details = []
+    total_weighted = 0.0
+    total_weights = 0.0
+
+    for var in variables:
+        key = var.get("variableKey") or var.get("key") or var.get("name")
+        weight = float(var.get("weight") or 0.0)
+        if weight <= 0:
+            continue
+
+        value = _get_variable_value(key, data)
+        matched = None
+        ranges = var.get("ranges") or []
+        base = None
+
+        for r in ranges:
+            minv = float(r.get("minValue", 0.0))
+            maxv = float(r.get("maxValue", float('inf')))
+            if value >= minv and value <= maxv:
+                base = float(r.get("baseScore", 0.0))
+                matched = {"min": minv, "max": maxv, "baseScore": base}
+                break
+
+        if base is None:
+            base = float(ranges[-1].get("baseScore", 0.0)) if ranges else 0.0
+            matched = {"min": None, "max": None, "baseScore": base}
+
+        contrib = base * weight
+        total_weighted += contrib
+        total_weights += weight
+
+        details.append({
+            "variable": key,
+            "weight": weight,
+            "value": value,
+            "matched_range": matched,
+            "baseScore": base,
+            "contribution": contrib,
+        })
+
+    if total_weights <= 0:
+        score = calculate_rules_score(data, None)
+        return {"score": score, "details": details}
+
+    score = int(max(0, min(1000, total_weighted / total_weights)))
+    return {"score": score, "details": details}

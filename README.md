@@ -18,18 +18,18 @@ pip install -r requirements.txt
 BACKEND_URL="http://localhost:8080/api" \
 BACKEND_USER="admin" \
 BACKEND_PASS="admin123" \
-uvicorn app.main:app --host 0.0.0.0 --port 9000
+uvicorn app.main:app --host 0.0.0.0 --port 9001
 ```
 
 ### 3. Test Endpoints
 ```bash
 # Individual scoring
-curl -X POST 'http://localhost:9000/predict' \
+curl -X POST 'http://localhost:9001/predict' \
   -H 'Content-Type: application/json' \
   -d '{"dias_vencidos":30,"monto_adeudado":250000,"pct_pagos_on_time":0.85}'
 
 # Health check
-curl http://localhost:9000/health
+curl http://localhost:9001/health
 ```
 
 ## 📡 API Endpoints

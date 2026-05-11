@@ -201,8 +201,8 @@ def main():
     
     print(f"\n[DONE] ✓ Training pipeline complete!")
     print(f"\nNext steps:")
-    print(f"  1. Restart microservice: uvicorn app.main:app --port 9000")
-    print(f"  2. Test: curl -X POST http://localhost:9000/predict ...")
+    print(f"  1. Restart microservice: uvicorn app.main:app --port 9001")
+    print(f"  2. Test: curl -X POST http://localhost:9001/predict ...")
     print(f"  3. Compare: python3 scripts/compare_models.py --data {args.data}")
 
 

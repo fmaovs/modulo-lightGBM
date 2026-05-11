@@ -14,6 +14,8 @@ class PredictInput(BaseModel):
     segmento_cliente: Optional[str] = None
     fecha_vencimiento: Optional[str] = None
     cliente_id: Optional[str] = None
+    # Si el backend desea forzar uso de ML o reglas, puede indicar True/False.
+    prefer_ml: Optional[bool] = None
 
 
 class PredictOutput(BaseModel):
@@ -27,6 +29,8 @@ class PredictOutput(BaseModel):
     model_version: str
     usando_ml: bool
     recomendacion: str
+    # resumen de auditoría (quién calculó, reglas aplicadas) enviado al backend
+    audit: Optional[dict] = None
 
 
 class Feedback(BaseModel):
