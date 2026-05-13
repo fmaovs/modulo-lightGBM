@@ -31,34 +31,35 @@ def calculate_rules_score(data: dict, config: dict = None) -> int:
     Rules-based scoring matching backend configuration with ranges in original scales.
     """
     if not config:
-        # Fallback to simple rules
+        # Fallback to simple risk rules. Higher output means higher risk;
+        # callers invert it to a quality score.
         dias = int(data.get("dias_vencidos") or 0)
         monto = float(data.get("monto_adeudado") or 0.0)
         pct_on_time = data.get("pct_pagos_on_time")
 
         if dias <= 0:
-            part_dias = 500
+            part_dias = 20
         elif dias <= 30:
-            part_dias = 400
-        elif dias <= 90:
-            part_dias = 250
-        elif dias <= 180:
             part_dias = 120
+        elif dias <= 90:
+            part_dias = 300
+        elif dias <= 180:
+            part_dias = 550
         else:
-            part_dias = 10
+            part_dias = 800
 
         if monto <= 100000:
-            part_monto = 250
+            part_monto = 20
         elif monto <= 1000000:
-            part_monto = 160
-        else:
             part_monto = 80
+        else:
+            part_monto = 160
 
         if pct_on_time is None:
-            part_hist = 200
+            part_hist = 100
         else:
             pct = float(pct_on_time) if pct_on_time else 0.0
-            part_hist = int(max(0, min(250, pct * 2.5)))
+            part_hist = int(max(0, min(200, (1.0 - pct) * 200)))
 
         total = part_dias + part_monto + part_hist
         return max(0, min(1000, int(total)))

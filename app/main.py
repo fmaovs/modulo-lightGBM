@@ -7,6 +7,7 @@ import io
 import sys
 import json
 import copy
+import time
 
 from app.schemas import PredictInput, PredictOutput, Feedback
 from app.scoring.rules_engine import calculate_rules_score, evaluate_rules_with_details
@@ -23,9 +24,13 @@ ml = MLModel()
 backend_client = BackendClient(base_url=os.getenv("BACKEND_URL"))
 active_model = None
 scoring_config = None
+last_config_load_at = 0.0
+config_refresh_seconds = int(os.getenv("SCORING_CONFIG_REFRESH_SECONDS", "30"))
 
-def _load_config():
-    global active_model, scoring_config
+def _load_config(force: bool = False):
+    global active_model, scoring_config, last_config_load_at
+    if force:
+        backend_client.clear_cache()
     try:
         print("[APP] Cargando configuración del backend...", file=sys.stderr)
         active_model = backend_client.get_active_model()
@@ -50,11 +55,19 @@ def _load_config():
                         print(f"[APP]   - {key}: error cargando ranges: {e}", file=sys.stderr)
                         v["ranges"] = []
                 scoring_config = {"variables": vars_cfg}
+                last_config_load_at = time.time()
                 print(f"[APP] ✓ Configuración cargada: {len(vars_cfg)} variables con ranges", file=sys.stderr)
     except Exception as e:
         print(f"[APP] ✗ Error cargando configuración: {e}", file=sys.stderr)
         active_model = None
         scoring_config = None
+
+
+def _refresh_config_if_needed():
+    if config_refresh_seconds <= 0:
+        return
+    if scoring_config is None or (time.time() - last_config_load_at) >= config_refresh_seconds:
+        _load_config(force=True)
 
 # Cargar config al iniciar
 _load_config()
@@ -63,6 +76,7 @@ _load_config()
 @app.post("/predict", response_model=PredictOutput)
 def predict(payload: PredictInput):
     data = payload.dict()
+    _refresh_config_if_needed()
     # Usar config en cache si está disponible
     cfg = scoring_config
     print(f"[PREDICT] cfg={cfg is not None}, vars={len(cfg.get('variables',[])) if cfg else 0}", file=sys.stderr)
@@ -74,8 +88,7 @@ def predict(payload: PredictInput):
 
     # ML predictions (prob 0..100)
     prob = ml.predict_proba(data)
-    risk_score_ml = int(prob * 10)  # map 0..100 probability to 0..1000 risk
-    score_ml = 1000 - risk_score_ml  # invert to quality score
+    score_ml = int(prob * 10)  # map 0..100 payment probability to 0..1000 quality score
 
     # Decide which engine to use based on backend preference and availability
     prefer_ml = data.get("prefer_ml")
@@ -150,6 +163,22 @@ def predict(payload: PredictInput):
         , audit={"engine_used": engine, "model_version": ml.version()}
     )
     return out
+
+
+@app.post("/score", response_model=PredictOutput)
+def score(payload: PredictInput):
+    return predict(payload)
+
+
+@app.post("/config/refresh")
+def refresh_config():
+    _load_config(force=True)
+    return {
+        "status": "ok",
+        "backend_connected": active_model is not None,
+        "scoring_config_loaded": scoring_config is not None,
+        "variables": len(scoring_config.get("variables", [])) if scoring_config else 0,
+    }
 
 
 @app.post("/batch/upload")

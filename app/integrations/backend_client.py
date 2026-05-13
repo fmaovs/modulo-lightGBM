@@ -27,6 +27,9 @@ class BackendClient:
             except Exception:
                 self._token = None
 
+    def clear_cache(self):
+        self._cache.clear()
+
     def _headers(self):
         h = {"Content-Type": "application/json"}
         if self._token:

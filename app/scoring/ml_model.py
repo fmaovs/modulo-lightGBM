@@ -4,12 +4,12 @@ import lightgbm as lgb
 
 
 class MLModel:
-    def __init__(self, model_path: str = "model.txt"):
+    def __init__(self, model_path: str = "app/models/model.txt"):
         self._model = None
-        self._model_path = model_path
-        if os.path.exists(model_path):
+        self._model_path = model_path if os.path.exists(model_path) else "model.txt"
+        if os.path.exists(self._model_path):
             try:
-                self._model = lgb.Booster(model_file=model_path)
+                self._model = lgb.Booster(model_file=self._model_path)
             except Exception:
                 self._model = None
 
@@ -77,4 +77,3 @@ class MLModel:
 
     def version(self) -> str:
         return "0.0.0" if not self.is_available() else "model-file"
-

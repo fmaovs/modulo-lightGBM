@@ -14,6 +14,13 @@ class PredictInput(BaseModel):
     segmento_cliente: Optional[str] = None
     fecha_vencimiento: Optional[str] = None
     cliente_id: Optional[str] = None
+    telefono: Optional[str] = None
+    mobile: Optional[str] = None
+    email: Optional[str] = None
+    seniority_months: Optional[int] = None
+    default_frequency: Optional[float] = None
+    broken_promises: Optional[float] = None
+    broken_promises_count: Optional[float] = None
     # Si el backend desea forzar uso de ML o reglas, puede indicar True/False.
     prefer_ml: Optional[bool] = None
 
