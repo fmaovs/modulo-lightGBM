@@ -118,17 +118,25 @@ def predict(payload: PredictInput):
     print(f"[PREDICT] Engine Selection: prefer_ml={prefer_ml}, ml_available={ml_available} -> Selected: {engine}", file=sys.stderr)
     print(f"[PREDICT] Results: score_reglas={score_reglas}, score_ml={score_ml} -> score_final={score_final}", file=sys.stderr)
 
-    segmento = "BRONCE"
-    if score_final >= 800:
-        segmento = "PLATINO"
-    elif score_final >= 650:
-        segmento = "ORO"
-    elif score_final >= 500:
-        segmento = "PLATA"
-    elif score_final >= 300:
-        segmento = "BRONCE"
-    else:
-        segmento = "RECOVERY"
+    # Segmentación y Recomendación dinámicas desde el backend
+    segmento = None
+    recomendacion = None
+
+    if active_model:
+        # Intentar obtener segmentación del active_model si el backend la provee
+        # Si no la provee, no usamos datos quemados.
+        thresholds = active_model.get("segmentationThresholds")
+        if thresholds:
+            # Ejemplo de lógica si el backend enviara: {"PLATINO": 800, "ORO": 650, ...}
+            sorted_thresholds = sorted(thresholds.items(), key=lambda x: x[1], reverse=True)
+            for seg, val in sorted_thresholds:
+                if score_final >= val:
+                    segmento = seg
+                    break
+
+        recs = active_model.get("recommendations")
+        if recs and segmento:
+            recomendacion = recs.get(segmento)
 
     # build audit record
     audit = {
@@ -164,8 +172,8 @@ def predict(payload: PredictInput):
         segmento=segmento,
         model_version=ml.version(),
         usando_ml=ml.is_available(),
-        recomendacion="Contacto preferente + incentivos" if score_final < 600 else "Mantenimiento"
-        , audit={"engine_used": engine, "model_version": ml.version()}
+        recomendacion=recomendacion,
+        audit={"engine_used": engine, "model_version": ml.version()}
     )
     return out
 
@@ -200,7 +208,12 @@ async def upload_batch(file: UploadFile = File(...)):
     # procesar filas y calcular scores (streaming sería ideal)
     results = []
     for _, row in df.iterrows():
-        payload = PredictInput(**row.fillna(0).to_dict())
+        # Map seniority_days if present, or handle missing
+        row_dict = row.fillna(0).to_dict()
+        if "seniority_months" in row_dict and "seniority_days" not in row_dict:
+             row_dict["seniority_days"] = int(row_dict["seniority_months"]) * 30 # Rough estimate for legacy CSVs
+
+        payload = PredictInput(**row_dict)
         out = predict(payload)
         results.append(out.dict())
     # Return full results so callers can query by obligacion_id client-side
