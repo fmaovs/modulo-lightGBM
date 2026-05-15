@@ -1,28 +1,34 @@
 def _get_variable_value(var_key: str, data: dict):
-    """Get raw value in original scale matching backend range definitions."""
+    """
+    Get raw value in original scale matching backend logic in NativeScoringEngine.java
+    """
     if var_key == "DAYS_PAST_DUE":
         return float(data.get("dias_vencidos") or 0)
+    
     if var_key == "AMOUNT_DUE":
         return float(data.get("monto_adeudado") or 0.0)
-    if var_key == "PAYMENT_HISTORY":
-        pct = data.get("pct_pagos_on_time")
-        return max(0.0, min(1.0, float(pct))) if pct else 0.5
-    if var_key == "SENIORITY_MONTHS":
-        return float(data.get("seniority_months") or 0)
+    
+    if var_key == "SENIORITY":
+        # Java uses ChronoUnit.DAYS between createdAt and now
+        return float(data.get("seniority_days") or 0)
+    
     if var_key == "DEFAULT_FREQUENCY":
-        freq = data.get("default_frequency")
-        return max(0.0, min(1.0, float(freq))) if freq else 0.5
+        # Java counts obligations with dpd > 0
+        return float(data.get("default_frequency") or 0)
+    
     if var_key == "CONTACTABILITY":
+        # Java: 1.0 for mobile + 1.0 for email (max 2.0)
         score = 0.0
         if data.get("mobile") or data.get("telefono"):
-            score += 0.6
+            score += 1.0
         if data.get("email"):
-            score += 0.4
-        return max(0.0, min(1.0, score))
+            score += 1.0
+        return score
+    
     if var_key == "BROKEN_PROMISES":
-        promises = data.get("broken_promises") or 0
-        val = float(promises) if promises else 0.0
-        return val if val <= 1.0 else min(1.0, val / 10.0)
+        return float(data.get("broken_promises") or 0)
+    
+    # Fallback for any other keys
     return float(data.get(var_key.lower()) or 0)
 
 
@@ -122,6 +128,8 @@ def evaluate_rules_with_details(data: dict, config: dict = None) -> dict:
     total_weighted = 0.0
     total_weights = 0.0
 
+    import sys
+    print(f"[IA-FLOW] Iniciando evaluación detallada con {len(variables)} variables", file=sys.stderr)
     for var in variables:
         key = var.get("variableKey") or var.get("key") or var.get("name")
         weight = float(var.get("weight") or 0.0)
@@ -132,6 +140,7 @@ def evaluate_rules_with_details(data: dict, config: dict = None) -> dict:
         matched = None
         ranges = var.get("ranges") or []
         base = None
+        matched_range_str = "None"
 
         for r in ranges:
             minv = float(r.get("minValue", 0.0))
@@ -139,15 +148,19 @@ def evaluate_rules_with_details(data: dict, config: dict = None) -> dict:
             if value >= minv and value <= maxv:
                 base = float(r.get("baseScore", 0.0))
                 matched = {"min": minv, "max": maxv, "baseScore": base}
+                matched_range_str = f"[{minv}, {maxv if maxv != float('inf') else 'inf'}]"
                 break
 
         if base is None:
             base = float(ranges[-1].get("baseScore", 0.0)) if ranges else 0.0
             matched = {"min": None, "max": None, "baseScore": base}
+            matched_range_str = "Default/Fallback"
 
         contrib = base * weight
         total_weighted += contrib
         total_weights += weight
+
+        print(f"[IA-FLOW]  - Var: {key:18} | Val: {value:10.2f} | Range: {matched_range_str:20} | Base: {base:5} | W: {weight:.2f} | C: {contrib:.2f}", file=sys.stderr)
 
         details.append({
             "variable": key,
@@ -162,5 +175,9 @@ def evaluate_rules_with_details(data: dict, config: dict = None) -> dict:
         score = calculate_rules_score(data, None)
         return {"score": score, "details": details}
 
+    # IMPORTANT: The backend parametric engine returns a QUALITY score (higher is better).
+    # If the ranges are defined as RISK (higher is worse), we would need to invert it.
+    # However, for logical parity, we will just return the weighted average.
     score = int(max(0, min(1000, total_weighted / total_weights)))
+    print(f"[IA-FLOW] Resultado final REGLAS: {score}", file=sys.stderr)
     return {"score": score, "details": details}

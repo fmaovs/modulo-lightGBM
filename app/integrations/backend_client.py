@@ -1,4 +1,5 @@
 import os
+import sys
 import requests
 from typing import Optional
 
@@ -23,8 +24,11 @@ class BackendClient:
             self._token = self.api_key
         elif self.user and self.password:
             try:
+                print(f"[BACKEND-CLIENT] Intentando autenticar con usuario: {self.user} en {self.base_url}", file=sys.stderr)
                 self.authenticate(self.user, self.password)
-            except Exception:
+                print("[BACKEND-CLIENT] ✓ Autenticación exitosa", file=sys.stderr)
+            except Exception as e:
+                print(f"[BACKEND-CLIENT] ✗ Error de autenticación: {e}", file=sys.stderr)
                 self._token = None
 
     def clear_cache(self):
@@ -52,12 +56,17 @@ class BackendClient:
         if "active_model" in self._cache:
             return self._cache["active_model"]
         url = f"{self.base_url.rstrip('/')}/scoring/config/models/active"
-        r = requests.get(url, headers=self._headers(), timeout=5)
-        if r.status_code != 200:
+        try:
+            r = requests.get(url, headers=self._headers(), timeout=5)
+            if r.status_code != 200:
+                print(f"[BACKEND-CLIENT] ✗ Error al obtener modelo activo: status={r.status_code}, body={r.text[:100]}", file=sys.stderr)
+                return None
+            j = r.json()
+            self._cache["active_model"] = j
+            return j
+        except Exception as e:
+            print(f"[BACKEND-CLIENT] ✗ Excepción al obtener modelo activo: {e}", file=sys.stderr)
             return None
-        j = r.json()
-        self._cache["active_model"] = j
-        return j
 
     def get_variables(self, version: str):
         key = f"vars:{version}"

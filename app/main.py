@@ -76,15 +76,17 @@ _load_config()
 @app.post("/predict", response_model=PredictOutput)
 def predict(payload: PredictInput):
     data = payload.dict()
+    print(f"\n[PREDICT] Recibido payload para cliente {data.get('cliente_id')}:", file=sys.stderr)
+    print(f"         {json.dumps(data, indent=2)}", file=sys.stderr)
+    
     _refresh_config_if_needed()
     # Usar config en cache si está disponible
     cfg = scoring_config
-    print(f"[PREDICT] cfg={cfg is not None}, vars={len(cfg.get('variables',[])) if cfg else 0}", file=sys.stderr)
+    print(f"[PREDICT] Configuración cargada: {cfg is not None}, Versión: {active_model.get('modelVersion') if active_model else 'N/A'}", file=sys.stderr)
     
     # Evaluate rules with details for auditing
     rules_eval = evaluate_rules_with_details(data, config=cfg)
-    risk_score_rules = rules_eval.get("score")
-    score_reglas = 1000 - risk_score_rules
+    score_reglas = rules_eval.get("score")
 
     # ML predictions (prob 0..100)
     prob = ml.predict_proba(data)
@@ -112,6 +114,9 @@ def predict(payload: PredictInput):
         else:
             engine = "RULES"
             score_final = score_reglas
+
+    print(f"[PREDICT] Engine Selection: prefer_ml={prefer_ml}, ml_available={ml_available} -> Selected: {engine}", file=sys.stderr)
+    print(f"[PREDICT] Results: score_reglas={score_reglas}, score_ml={score_ml} -> score_final={score_final}", file=sys.stderr)
 
     segmento = "BRONCE"
     if score_final >= 800:
