@@ -17,7 +17,7 @@ class PredictInput(BaseModel):
     telefono: Optional[str] = None
     mobile: Optional[str] = None
     email: Optional[str] = None
-    seniority_months: Optional[int] = None
+    seniority_days: Optional[int] = None
     default_frequency: Optional[float] = None
     broken_promises: Optional[float] = None
     broken_promises_count: Optional[float] = None
@@ -32,10 +32,10 @@ class PredictOutput(BaseModel):
     score_ml: int
     probabilidad_pago: float
     riesgo_incumplimiento: float
-    segmento: str
+    segmento: Optional[str] = None
     model_version: str
     usando_ml: bool
-    recomendacion: str
+    recomendacion: Optional[str] = None
     # resumen de auditoría (quién calculó, reglas aplicadas) enviado al backend
     audit: Optional[dict] = None
 
