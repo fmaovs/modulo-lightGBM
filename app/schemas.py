@@ -32,6 +32,7 @@ class PredictOutput(BaseModel):
     score_ml: int
     probabilidad_pago: float
     riesgo_incumplimiento: float
+    risk_level: str
     segmento: str
     model_version: str
     usando_ml: bool

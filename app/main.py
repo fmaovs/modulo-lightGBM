@@ -39,6 +39,8 @@ def _load_config(force: bool = False):
         if active_model:
             version = active_model.get("modelVersion") or active_model.get("version") or str(active_model.get("id") or "default")
             vars_raw = backend_client.get_variables(version)
+            thresholds = backend_client.get_thresholds(version)
+            segment_rules = backend_client.get_segment_rules()
             
             if vars_raw:
                 # Make deep copy to avoid cache mutation issues
@@ -50,13 +52,17 @@ def _load_config(force: bool = False):
                     try:
                         ranges = backend_client.get_variable_ranges(version, key)
                         v["ranges"] = ranges or []
-                        print(f"[APP]   - {key}: {len(ranges or [])} ranges", file=sys.stderr)
                     except Exception as e:
-                        print(f"[APP]   - {key}: error cargando ranges: {e}", file=sys.stderr)
                         v["ranges"] = []
-                scoring_config = {"variables": vars_cfg}
+
+                scoring_config = {
+                    "variables": vars_cfg,
+                    "thresholds": thresholds or [],
+                    "segment_rules": segment_rules or [],
+                    "model_config": active_model
+                }
                 last_config_load_at = time.time()
-                print(f"[APP] ✓ Configuración cargada: {len(vars_cfg)} variables con ranges", file=sys.stderr)
+                print(f"[APP] ✓ Configuración cargada: {len(vars_cfg)} variables, {len(thresholds or [])} thresholds, {len(segment_rules or [])} segment rules", file=sys.stderr)
     except Exception as e:
         print(f"[APP] ✗ Error cargando configuración: {e}", file=sys.stderr)
         active_model = None
@@ -82,15 +88,21 @@ def predict(payload: PredictInput):
     _refresh_config_if_needed()
     # Usar config en cache si está disponible
     cfg = scoring_config
-    print(f"[PREDICT] Configuración cargada: {cfg is not None}, Versión: {active_model.get('modelVersion') if active_model else 'N/A'}", file=sys.stderr)
-    
+    # Debug: indicate whether config was loaded and model version
+    try:
+        print(f"[PREDICT] Configuración cargada: {cfg is not None}, Versión: {active_model.get('modelVersion') if active_model else 'N/A'}", file=sys.stderr)
+    except Exception:
+        print(f"[PREDICT] Configuración cargada: {cfg is not None}", file=sys.stderr)
     # Evaluate rules with details for auditing
     rules_eval = evaluate_rules_with_details(data, config=cfg)
     score_reglas = rules_eval.get("score")
 
     # ML predictions (prob 0..100)
-    prob = ml.predict_proba(data)
+    prob = ml.predict_proba(data, config=cfg)
     score_ml = int(prob * 10)  # map 0..100 payment probability to 0..1000 quality score
+
+    # Explainability (SHAP)
+    explanation = ml.explain(data)
 
     # Decide which engine to use based on backend preference and availability
     prefer_ml = data.get("prefer_ml")
@@ -115,20 +127,36 @@ def predict(payload: PredictInput):
             engine = "RULES"
             score_final = score_reglas
 
+    # Debug: engine and scores
     print(f"[PREDICT] Engine Selection: prefer_ml={prefer_ml}, ml_available={ml_available} -> Selected: {engine}", file=sys.stderr)
     print(f"[PREDICT] Results: score_reglas={score_reglas}, score_ml={score_ml} -> score_final={score_final}", file=sys.stderr)
 
-    segmento = "BRONCE"
-    if score_final >= 800:
-        segmento = "PLATINO"
-    elif score_final >= 650:
-        segmento = "ORO"
-    elif score_final >= 500:
-        segmento = "PLATA"
-    elif score_final >= 300:
-        segmento = "BRONCE"
-    else:
-        segmento = "RECOVERY"
+    # 1. Resolve Risk Level using configured thresholds
+    risk_level = "MEDIO"
+    thresholds = cfg.get("thresholds") if cfg else []
+    print(f"[IA-FLOW] Evaluando {len(thresholds)} umbrales para score_final={score_final}", file=sys.stderr)
+    for t in thresholds:
+        min_s = t.get("minScore", 0)
+        max_s = t.get("maxScore", 1000)
+        if score_final >= min_s and score_final <= max_s:
+            risk_level = t.get("riskLevel", "MEDIO")
+            print(f"[IA-FLOW] ✓ Match umbral: {min_s}-{max_s} -> {risk_level}", file=sys.stderr)
+            break
+
+    # 2. Resolve Segment using configured segment rules (based on DPD)
+    segmento = "ADMINISTRATIVA"
+    dias = int(data.get("dias_vencidos") or 0)
+    seg_rules = cfg.get("segment_rules") if cfg else []
+    print(f"[IA-FLOW] Evaluando {len(seg_rules)} reglas de segmento para dias_vencidos={dias}", file=sys.stderr)
+    for s in seg_rules:
+        min_d = s.get("minDays") or 0
+        max_d = s.get("maxDays") or 99999
+        if dias >= min_d and (max_d is None or dias <= max_d):
+            segmento = s.get("segment", "ADMINISTRATIVA")
+            print(f"[IA-FLOW] ✓ Match segmento: {min_d}-{max_d} -> {segmento}", file=sys.stderr)
+            break
+
+    print(f"[IA-FLOW] Resultado Final -> Score: {score_final} | Riesgo: {risk_level} | Segmento: {segmento} | Motor: {engine}", file=sys.stderr)
 
     # build audit record
     audit = {
@@ -139,18 +167,13 @@ def predict(payload: PredictInput):
         "score_reglas": score_reglas,
         "score_ml": score_ml,
         "score_final": score_final,
+        "explanation": explanation,
         "rules_details": rules_eval.get("details", []),
     }
 
     # best-effort: send audit to backend and persist locally
     try:
         backend_client.send_score_audit(audit)
-    except Exception:
-        pass
-    try:
-        os.makedirs("data", exist_ok=True)
-        with open("data/score_audit.log", "a") as f:
-            f.write(json.dumps(audit) + "\n")
     except Exception:
         pass
 
@@ -161,55 +184,41 @@ def predict(payload: PredictInput):
         score_ml=score_ml,
         probabilidad_pago=prob,
         riesgo_incumplimiento=100 - prob,
+        risk_level=risk_level,
         segmento=segmento,
         model_version=ml.version(),
         usando_ml=ml.is_available(),
-        recomendacion="Contacto preferente + incentivos" if score_final < 600 else "Mantenimiento"
-        , audit={"engine_used": engine, "model_version": ml.version()}
+        recomendacion="Contacto preferente + incentivos" if score_final < 600 else "Mantenimiento",
+        audit=audit
     )
     return out
 
 
-@app.post("/score", response_model=PredictOutput)
-def score(payload: PredictInput):
-    return predict(payload)
-
-
-@app.post("/config/refresh")
-def refresh_config():
-    _load_config(force=True)
-    return {
-        "status": "ok",
-        "backend_connected": active_model is not None,
-        "scoring_config_loaded": scoring_config is not None,
-        "variables": len(scoring_config.get("variables", [])) if scoring_config else 0,
-    }
-
-
-@app.post("/batch/upload")
-async def upload_batch(file: UploadFile = File(...)):
+@app.post("/train")
+async def train_model(file: UploadFile = File(...)):
+    """Endpoint to re-train the model with historical data from the backend."""
     if not file.filename.endswith('.csv'):
-        raise HTTPException(status_code=400, detail="Se requiere un CSV")
+        raise HTTPException(status_code=400, detail="CSV file required")
+
     content = await file.read()
     df = pd.read_csv(io.BytesIO(content))
-    # simple validación básica
-    required = ["obligacion_id", "dias_vencidos", "monto_adeudado"]
+
+    # Required columns for training
+    required = ["paid_within_30d"] + ml._feature_names
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise HTTPException(status_code=400, detail={"missing_columns": missing})
-    # procesar filas y calcular scores (streaming sería ideal)
-    results = []
-    for _, row in df.iterrows():
-        payload = PredictInput(**row.fillna(0).to_dict())
-        out = predict(payload)
-        results.append(out.dict())
-    # Return full results so callers can query by obligacion_id client-side
-    return JSONResponse({"processed": len(results), "results": results, "results_sample": results[:3]})
+
+    result = ml.train(df)
+    if result["status"] == "error":
+        raise HTTPException(status_code=500, detail=result["message"])
+
+    return result
 
 
 @app.post("/feedback")
 def post_feedback(payload: Feedback):
-    # por ahora persistencia simple: log to console (integrar BD luego)
+    # Persistencia en log para futuro entrenamiento
     print("FEEDBACK RECEIVED:", payload.dict())
     return {"status": "ok"}
 

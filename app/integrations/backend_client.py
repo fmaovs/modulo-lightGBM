@@ -92,6 +92,29 @@ class BackendClient:
         self._cache[key] = j
         return j
 
+    def get_thresholds(self, version: str):
+        key = f"thresholds:{version}"
+        if key in self._cache:
+            return self._cache[key]
+        url = f"{self.base_url.rstrip('/')}/scoring/config/models/{version}/thresholds"
+        r = requests.get(url, headers=self._headers(), timeout=5)
+        if r.status_code != 200:
+            return None
+        j = r.json()
+        self._cache[key] = j
+        return j
+
+    def get_segment_rules(self):
+        if "segment_rules" in self._cache:
+            return self._cache["segment_rules"]
+        url = f"{self.base_url.rstrip('/')}/scoring/workflow-config/segment-rules"
+        r = requests.get(url, headers=self._headers(), timeout=5)
+        if r.status_code != 200:
+            return None
+        j = r.json()
+        self._cache["segment_rules"] = j
+        return j
+
     def send_score_audit(self, audit: dict) -> bool:
         """Send audit record to backend; best-effort, returns True if HTTP 200/201."""
         try:
